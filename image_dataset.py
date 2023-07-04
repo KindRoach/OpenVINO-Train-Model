@@ -40,7 +40,7 @@ class ImageDataModule(pl.LightningDataModule):
 
         mean, std = calculate_dataset_statistics(self.dataset["train"]["img"], self.image_shape)
         self.transform = transforms.Compose([
-            transforms.Resize(224),
+            transforms.Resize(image_shape),
             transforms.ToTensor(),
             transforms.Normalize(mean, std)
         ])

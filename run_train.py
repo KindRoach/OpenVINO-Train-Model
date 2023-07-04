@@ -1,32 +1,48 @@
+import sys
+from typing import List
+
 import pytorch_lightning as pl
 import torch
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from simple_parsing import ArgumentParser
 
 from image_dataset import ImageDataModule
-from resnet50 import ResNet50
+from resnet50 import ResNet50, Args
 
 
-def main():
+def main(args: Args):
     torch.set_float32_matmul_precision('medium')
+    data_module = ImageDataModule("cifar10", args.batch_size, (224, 224))
+    args.n_class = len(data_module.dataset["train"].features["label"].names)
+    model = ResNet50(args)
 
-    # Define hyperparameters
-    batch_size = 196
-    num_epochs = 100
-    learning_rate = 1e-3
+    checkpoint_callback = ModelCheckpoint(
+        save_top_k=10, monitor="val_loss",
+        auto_insert_metric_name=False,
+        filename="ep={epoch}-acc={val_acc:.2f}"
+    )
 
-    data_module = ImageDataModule("cifar10", batch_size, (224, 224))
+    early_stop_callback = EarlyStopping(
+        monitor="val_acc", mode="max",
+        min_delta=0.00, patience=5,
+        verbose=True
+    )
 
-    # Create an instance of the model
-    n_class = len(data_module.dataset["train"].features["label"].names)
-    model = ResNet50(n_class, learning_rate)
+    trainer = pl.Trainer(
+        max_epochs=args.num_epochs,
+        default_root_dir="output",
+        callbacks=[checkpoint_callback, early_stop_callback])
 
-    # Create a trainer object with some settings
-    trainer = pl.Trainer(max_epochs=num_epochs, default_root_dir="output")
-
-    # Train the model on the training data and validate on the test data
     trainer.fit(model, data_module)
     result = trainer.test(model, data_module)
     print(result)
 
 
+def parse_args(args: List[str]):
+    parser = ArgumentParser()
+    parser.add_arguments(Args, dest="arguments")
+    return parser.parse_args(args).arguments
+
+
 if __name__ == '__main__':
-    main()
+    main(parse_args(sys.argv[1:]))

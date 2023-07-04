@@ -1,3 +1,4 @@
 datasets==2.13.1
 pytorch-lightning==2.0.4
 tensorboard==2.13.0
+simple-parsing==0.1.3
