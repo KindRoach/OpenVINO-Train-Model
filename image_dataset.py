@@ -58,13 +58,13 @@ class ImageDataModule(pl.LightningDataModule):
         self.test_set = ImageDataset(dataset_test["img"], dataset_test["label"], self.transform)
 
     def train_dataloader(self):
-        return DataLoader(self.train_set, self.batch_size, True, num_workers=os.cpu_count())
+        return DataLoader(self.train_set, self.batch_size, True, num_workers=os.cpu_count(), pin_memory=True)
 
     def val_dataloader(self):
-        return DataLoader(self.valid_set, self.batch_size, num_workers=os.cpu_count())
+        return DataLoader(self.valid_set, self.batch_size, num_workers=os.cpu_count(), pin_memory=True)
 
     def test_dataloader(self):
-        return DataLoader(self.test_set, self.batch_size, num_workers=os.cpu_count())
+        return DataLoader(self.test_set, self.batch_size, num_workers=os.cpu_count(), pin_memory=True)
 
 
 def calculate_dataset_statistics(imgs: List[ImageFile], image_shape: (int, int)) -> (np.ndarray, np.ndarray):

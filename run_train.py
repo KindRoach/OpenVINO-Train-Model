@@ -14,12 +14,12 @@ def main(args: Args):
     torch.set_float32_matmul_precision('medium')
     data_module = ImageDataModule("cifar10", args.batch_size, (224, 224))
     args.n_class = len(data_module.dataset["train"].features["label"].names)
-    model = ResNet50(args)
+    model = ResNet50(**args.__dict__)
 
     checkpoint_callback = ModelCheckpoint(
         save_top_k=10, monitor="val_loss",
         auto_insert_metric_name=False,
-        filename="ep={epoch}-acc={val_acc:.2f}"
+        filename="ep={epoch}-acc={val_acc:.3f}"
     )
 
     early_stop_callback = EarlyStopping(
@@ -31,11 +31,11 @@ def main(args: Args):
     trainer = pl.Trainer(
         max_epochs=args.num_epochs,
         default_root_dir="output",
+        precision="16-mixed",
         callbacks=[checkpoint_callback, early_stop_callback])
 
     trainer.fit(model, data_module)
-    result = trainer.test(model, data_module)
-    print(result)
+    trainer.test(model, data_module, verbose=True)
 
 
 def parse_args(args: List[str]):
