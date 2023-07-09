@@ -17,7 +17,7 @@ def main(args: Args):
     model = ResNet50(**args.__dict__)
 
     checkpoint_callback = ModelCheckpoint(
-        save_top_k=10, monitor="val_loss",
+        save_top_k=10, monitor="val_acc", mode="max",
         auto_insert_metric_name=False,
         filename="ep={epoch}-acc={val_acc:.3f}"
     )
@@ -36,6 +36,7 @@ def main(args: Args):
 
     trainer.fit(model, data_module)
     trainer.test(model, data_module, verbose=True)
+    print(f"best model saved as: {checkpoint_callback.best_model_path}")
 
 
 def parse_args(args: List[str]):
