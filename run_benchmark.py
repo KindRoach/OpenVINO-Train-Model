@@ -12,11 +12,18 @@ from resnet50 import ResNet50
 
 def main():
     data_module = ImageDataModule("cifar10", 128, (224, 224))
-    ov_model_path = "output/model/ov/fp32/model.xml"
     torch_model_path = "output/lightning_logs/version_25/checkpoints/ep=19-acc=0.856.ckpt"
     torch_acc = benchmark_torch_model(data_module, torch_model_path)
-    ov_acc = benchmark_ov_model(data_module, ov_model_path)
-    print(f"torch_acc={torch_acc:.3f}\nov_acc={ov_acc:.3f}")
+
+    ov_model_path = "output/model/ov/fp32/model.xml"
+    ov_fp32_acc = benchmark_ov_model(data_module, ov_model_path)
+
+    ov_model_path = "output/model/ov/int8/model.xml"
+    ov_int8_acc = benchmark_ov_model(data_module, ov_model_path)
+
+    print(f"torch_acc={torch_acc:.3f}\n"
+          f"ov_fp32_acc={ov_fp32_acc:.3f}\n"
+          f"ov_int8_acc={ov_int8_acc:.3f}")
 
 
 def benchmark_torch_model(data_module, torch_model_path):
