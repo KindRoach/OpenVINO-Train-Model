@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 @dataclass
 class Args:
-    n_class: int = -1
+    n_class: int = 10
     num_epochs: int = 100
     batch_size: int = 256
     learning_rate: int = 1e-3

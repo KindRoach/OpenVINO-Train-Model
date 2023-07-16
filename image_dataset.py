@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 import torch
 from PIL.ImageFile import ImageFile
 from torch.utils.data import Dataset, DataLoader, random_split
-from torchvision.transforms import transforms
+from torchvision.transforms import transforms, Compose
 from tqdm import tqdm
 
 
@@ -31,21 +31,19 @@ class ImageDataset(Dataset):
 
 
 class ImageDataModule(pl.LightningDataModule):
-    def __init__(self, dataset_name: str, batch_size: int, image_shape: (int, int)):
+    def __init__(self, dataset_name: str, batch_size: int, transform: Compose):
         super().__init__()
         self.dataset_name = dataset_name
         self.batch_size = batch_size
-        self.image_shape = image_shape
-        self.dataset = datasets.load_dataset(self.dataset_name, cache_dir="output/dataset")
+        self.transform = transform
+        self.dataset = None
 
-        mean, std = calculate_dataset_statistics(self.dataset["train"]["img"], self.image_shape)
-        self.transform = transforms.Compose([
-            transforms.Resize(image_shape),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std)
-        ])
+    def prepare_data(self) -> None:
+        datasets.load_dataset(self.dataset_name, cache_dir="output/dataset")
 
     def setup(self, stage: str):
+        self.dataset = datasets.load_dataset(self.dataset_name, cache_dir="output/dataset")
+
         dataset_train = self.dataset["train"]
         train_data = ImageDataset(dataset_train["img"], dataset_train["label"], self.transform)
 
@@ -67,18 +65,30 @@ class ImageDataModule(pl.LightningDataModule):
         return DataLoader(self.test_set, self.batch_size, num_workers=os.cpu_count(), pin_memory=True)
 
 
-def calculate_dataset_statistics(imgs: List[ImageFile], image_shape: (int, int)) -> (np.ndarray, np.ndarray):
+def load_datamodule(dataset_name: str, batch_size: int):
+    image_shape = (224, 224)
+    transform = transforms.Compose([
+        transforms.Resize(image_shape),
+        transforms.ToTensor(),
+    ])
+
+    dataset = datasets.load_dataset(dataset_name, cache_dir="output/dataset")
+    mean, std = calculate_dataset_statistics(dataset["train"]["img"], image_shape, transform)
+
+    transform.transforms.append(transforms.Normalize(mean, std))
+    return ImageDataModule(dataset_name, batch_size, transform)
+
+
+def calculate_dataset_statistics(
+        imgs: List[ImageFile],
+        image_shape: (int, int),
+        transform: Compose) -> (np.ndarray, np.ndarray):
     """
     Reference: https://kozodoi.me/blog/20210308/compute-image-stats
     :param imgs:
     :param img_size:
     :return: mean and std of dataset
     """
-    transform = transforms.Compose([
-        transforms.Resize(image_shape),
-        transforms.ToTensor()
-    ])
-
     p_sum = torch.zeros(3, dtype=torch.float64)
     p_sum_sq = torch.zeros(3, dtype=torch.float64)
     for img in tqdm(imgs, desc="Calculating mean and std"):

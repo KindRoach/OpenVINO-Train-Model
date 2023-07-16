@@ -6,14 +6,13 @@ import torch
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from simple_parsing import ArgumentParser
 
-from image_dataset import ImageDataModule
+from image_dataset import ImageDataModule, load_datamodule
 from resnet50 import ResNet50, Args
 
 
 def main(args: Args):
     torch.set_float32_matmul_precision('medium')
-    data_module = ImageDataModule("cifar10", args.batch_size, (224, 224))
-    args.n_class = len(data_module.dataset["train"].features["label"].names)
+    data_module = load_datamodule("cifar10", args.batch_size)
     model = ResNet50(**args.__dict__)
 
     checkpoint_callback = ModelCheckpoint(
