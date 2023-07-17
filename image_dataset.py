@@ -73,7 +73,8 @@ def load_datamodule(dataset_name: str, batch_size: int):
     ])
 
     dataset = datasets.load_dataset(dataset_name, cache_dir="output/dataset")
-    mean, std = calculate_dataset_statistics(dataset["train"]["img"], image_shape, transform)
+    images = dataset["train"]["img"] + dataset["test"]["img"]
+    mean, std = calculate_dataset_statistics(images, image_shape, transform)
 
     transform.transforms.append(transforms.Normalize(mean, std))
     return ImageDataModule(dataset_name, batch_size, transform)

@@ -1,29 +1,35 @@
-import torch
 from statistics import mean
 
 import openvino.runtime as ov
+import torch
 from pytorch_lightning import Trainer
 from torchmetrics.functional import accuracy
 from tqdm import tqdm
 
-from image_dataset import ImageDataModule
+from image_dataset import load_datamodule
 from resnet50 import ResNet50
 
 
 def main():
-    data_module = ImageDataModule("cifar10", 128, (224, 224))
+    data_module = load_datamodule("cifar10", 128)
     torch_model_path = "output/lightning_logs/version_25/checkpoints/ep=19-acc=0.856.ckpt"
     torch_acc = benchmark_torch_model(data_module, torch_model_path)
 
     ov_model_path = "output/model/ov/fp32/model.xml"
     ov_fp32_acc = benchmark_ov_model(data_module, ov_model_path)
 
-    ov_model_path = "output/model/ov/int8/model.xml"
-    ov_int8_acc = benchmark_ov_model(data_module, ov_model_path)
+    ov_model_path = "output/model/ov/int8-pot/model.xml"
+    ov_int8_pot_acc = benchmark_ov_model(data_module, ov_model_path)
 
-    print(f"torch_acc={torch_acc:.3f}\n"
-          f"ov_fp32_acc={ov_fp32_acc:.3f}\n"
-          f"ov_int8_acc={ov_int8_acc:.3f}")
+    ov_model_path = "output/model/ov/int8-qac/model.xml"
+    ov_int8_qac_acc = benchmark_ov_model(data_module, ov_model_path)
+
+    print(
+        f"torch_acc={torch_acc:.3f}\n"
+        f"ov_fp32_acc={ov_fp32_acc:.3f}\n"
+        f"ov_int8_pot_acc={ov_int8_pot_acc:.3f}\n"
+        f"ov_int8_qac_acc={ov_int8_qac_acc:.3f}"
+    )
 
 
 def benchmark_torch_model(data_module, torch_model_path):
@@ -37,11 +43,6 @@ def benchmark_torch_model(data_module, torch_model_path):
 def benchmark_ov_model(data_module, ov_model_path):
     ie = ov.Core()
     model = ie.read_model(ov_model_path)
-    shapes = {}
-    for input_layer in model.inputs:
-        shapes[input_layer] = input_layer.partial_shape
-        shapes[input_layer][0] = -1
-    model.reshape(shapes)
     compiled_model = ie.compile_model(model)
     data_loader = data_module.test_dataloader()
     n_class = len(data_module.dataset["train"].features["label"].names)
